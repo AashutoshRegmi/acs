@@ -1,0 +1,9 @@
+# Environment files
+.env
+
+# Optional local overrides
+.env.local
+
+# Debug and test endpoints (do not deploy)
+debug_*.php
+test_*.php

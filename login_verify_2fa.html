@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Factor Authentication - SecureAuth</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2026-03-30">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-transparent">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="login.html">
+                <i class="fas fa-chevron-left me-2"></i>Back to Login
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="glass-card">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4">
+                            <i class="fas fa-shield-alt me-2"></i>Two-Factor Authentication
+                        </h2>
+
+                        <div class="alert alert-info mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Enter your authentication code</strong><br>
+                            Open Google Authenticator on your device and enter the 6-digit code.
+                        </div>
+
+                        <div id="alertContainer"></div>
+
+                        <form id="verify2FAForm" novalidate>
+                            <div class="mb-4">
+                                <label for="authCode" class="form-label">
+                                    <i class="fas fa-key me-2"></i>Authentication Code
+                                </label>
+                                <input type="text" class="form-control text-center fs-3" id="authCode"
+                                       maxlength="6" pattern="[0-9]{6}" placeholder="000000"
+                                       style="letter-spacing: 0.5rem; font-weight: bold;" required>
+                                <div class="form-text text-center">
+                                    Enter the 6-digit code from your authenticator app
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 mb-3" id="verifyBtn">
+                                <i class="fas fa-check-circle me-2"></i>Verify & Login
+                            </button>
+                        </form>
+
+                        <!-- Backup Code Option -->
+                        <div class="text-center mb-3">
+                            <button class="btn btn-link" onclick="showBackupCodeOption()">
+                                <i class="fas fa-key me-2"></i>Use backup code instead
+                            </button>
+                        </div>
+
+                        <!-- Backup Code Form (Hidden by default) -->
+                        <div id="backupCodeSection" class="d-none">
+                            <hr>
+                            <h6 class="text-center mb-3">Use Backup Code</h6>
+                            <form id="backupCodeForm">
+                                <div class="mb-3">
+                                    <label for="backupCode" class="form-label">Backup Code</label>
+                                    <input type="text" class="form-control text-center" id="backupCode"
+                                           placeholder="Enter backup code" required>
+                                    <div class="form-text text-center">
+                                        Enter one of your backup codes (case-sensitive)
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-outline-secondary w-100 mb-2" id="backupBtn">
+                                    <i class="fas fa-unlock me-2"></i>Use Backup Code
+                                </button>
+                            </form>
+                            <button class="btn btn-link btn-sm w-100" onclick="hideBackupCodeOption()">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </button>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <a href="login.html" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Login
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help Section -->
+                <div class="glass-card mt-4">
+                    <div class="card-body">
+                        <h6 class="mb-3"><i class="fas fa-question-circle me-2"></i>Need Help?</h6>
+                        <ul class="list-unstyled small mb-0">
+                            <li class="mb-2"><strong>Lost your device?</strong> Use a backup code to access your account.</li>
+                            <li class="mb-2"><strong>Wrong code?</strong> Make sure your device time is synchronized.</li>
+                            <li class="mb-2"><strong>Can't access?</strong> Contact support for account recovery.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="csrf_client.js"></script>
+    <script>
+        // Auto-focus on input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('authCode').focus();
+            if (window.ensureCsrfToken) {
+                window.ensureCsrfToken().catch(() => {
+                    // Keep page usable; server validation will still enforce token checks.
+                });
+            }
+        });
+
+        // Auto-submit when 6 digits entered
+        document.getElementById('authCode').addEventListener('input', function() {
+            const code = this.value.replace(/\D/g, ''); // Only allow digits
+            this.value = code;
+
+            if (code.length === 6) {
+                // Auto-submit after a brief delay
+                setTimeout(() => {
+                    document.getElementById('verify2FAForm').dispatchEvent(new Event('submit'));
+                }, 500);
+            }
+        });
+
+        // 2FA Code verification
+        document.getElementById('verify2FAForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const code = document.getElementById('authCode').value;
+            const verifyBtn = document.getElementById('verifyBtn');
+            const originalText = verifyBtn.innerHTML;
+
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
+
+            const token = window.ensureCsrfToken ? await window.ensureCsrfToken() : '';
+
+            fetch('verify_login_2fa.php', {
+                method: 'POST',
+                headers: window.withCsrfHeaders ? window.withCsrfHeaders({
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': token
+                }) : {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': token
+                },
+                body: JSON.stringify({ code: code, type: 'authenticator' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Login successful! Welcome back.', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                } else {
+                    showAlert(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('An error occurred during verification.', 'danger');
+            })
+            .finally(() => {
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = originalText;
+            });
+        });
+
+        // Backup code verification
+        document.getElementById('backupCodeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const code = document.getElementById('backupCode').value.trim();
+            const backupBtn = document.getElementById('backupBtn');
+            const originalText = backupBtn.innerHTML;
+
+            backupBtn.disabled = true;
+            backupBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
+
+            const token = window.ensureCsrfToken ? await window.ensureCsrfToken() : '';
+
+            fetch('verify_login_2fa.php', {
+                method: 'POST',
+                headers: window.withCsrfHeaders ? window.withCsrfHeaders({
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': token
+                }) : {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': token
+                },
+                body: JSON.stringify({ code: code, type: 'backup' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Login successful using backup code! Please set up 2FA again.', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                } else {
+                    showAlert(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('An error occurred during verification.', 'danger');
+            })
+            .finally(() => {
+                backupBtn.disabled = false;
+                backupBtn.innerHTML = originalText;
+            });
+        });
+
+        function showBackupCodeOption() {
+            document.getElementById('backupCodeSection').classList.remove('d-none');
+            document.getElementById('backupCode').focus();
+        }
+
+        function hideBackupCodeOption() {
+            document.getElementById('backupCodeSection').classList.add('d-none');
+            document.getElementById('authCode').focus();
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

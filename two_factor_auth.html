@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Factor Authentication - SecureAuth</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=2026-03-30">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-transparent">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="dashboard.html">
+                <i class="fas fa-chevron-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="glass-card">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4">
+                            <i class="fas fa-shield-alt me-2"></i>Two-Factor Authentication
+                        </h2>
+
+                        <div id="alertContainer"></div>
+
+                        <!-- 2FA Status Section -->
+                        <div id="statusSection" class="mb-4">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Setup Section (Hidden by default) -->
+                        <div id="setupSection" class="d-none">
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                <strong>Enable Two-Factor Authentication</strong><br>
+                                Add an extra layer of security to your account by enabling Google Authenticator.
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Step 1: Install Google Authenticator</h5>
+                                    <p>Download and install Google Authenticator on your phone:</p>
+                                    <div class="d-flex gap-2 mb-3">
+                                        <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2" target="_blank" class="btn btn-outline-success btn-sm">
+                                            <i class="fab fa-android me-1"></i>Android
+                                        </a>
+                                        <a href="https://apps.apple.com/app/google-authenticator/id388497605" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="fab fa-apple me-1"></i>iOS
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Step 2: Scan QR Code</h5>
+                                    <p>Scan this QR code with Google Authenticator:</p>
+                                    <div id="qrCodeContainer" class="text-center mb-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Generating QR Code...</span>
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted">
+                                        <strong>Manual Entry Code:</strong>
+                                        <span id="manualCode" class="font-monospace">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <h5>Step 3: Verify Setup</h5>
+                            <p>Enter the 6-digit code from your authenticator app:</p>
+
+                            <form id="verify2FAForm">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="verificationCode" class="form-label">Verification Code</label>
+                                        <input type="text" class="form-control text-center fs-4" id="verificationCode"
+                                               maxlength="6" pattern="[0-9]{6}" placeholder="000000" required>
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100" id="verifyBtn">
+                                            <i class="fas fa-check-circle me-2"></i>Enable 2FA
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Backup Codes Section (Hidden by default) -->
+                        <div id="backupCodesSection" class="d-none">
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Two-Factor Authentication Enabled!</strong><br>
+                                Save these backup codes in a safe place. You can use them to access your account if you lose your device.
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5>Your Backup Codes</h5>
+                                    <div id="backupCodes" class="mb-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Generating backup codes...</span>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>Important:</strong> Each backup code can only be used once. Store them securely and treat them like passwords.
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-primary" onclick="downloadBackupCodes()">
+                                            <i class="fas fa-download me-2"></i>Download Codes
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="copyBackupCodes()">
+                                            <i class="fas fa-copy me-2"></i>Copy Codes
+                                        </button>
+                                        <button class="btn btn-success" onclick="completeSetup()">
+                                            <i class="fas fa-check me-2"></i>I've Saved My Codes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Disable Section -->
+                        <div id="disableSection" class="d-none">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Disable Two-Factor Authentication</strong><br>
+                                This will make your account less secure. Are you sure you want to proceed?
+                            </div>
+
+                            <form id="disable2FAForm">
+                                <div class="mb-3">
+                                    <label for="disableCode" class="form-label">Enter your current password to confirm</label>
+                                    <input type="password" class="form-control" id="disableCode" required>
+                                </div>
+                                <button type="submit" class="btn btn-danger" id="disableBtn">
+                                    <i class="fas fa-times-circle me-2"></i>Disable 2FA
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="csrf_client.js"></script>
+    <script>
+        let backupCodes = [];
+
+        // Load 2FA status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.ensureCsrfToken) {
+                window.ensureCsrfToken().catch(() => {});
+            }
+            load2FAStatus();
+        });
+
+        function load2FAStatus() {
+            fetch('get_2fa_status.php')
+                .then(response => response.json())
+                .then(data => {
+                    const statusSection = document.getElementById('statusSection');
+                    const setupSection = document.getElementById('setupSection');
+                    const disableSection = document.getElementById('disableSection');
+
+                    if (data.enabled) {
+                        statusSection.innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <strong>Two-Factor Authentication is Enabled</strong><br>
+                                Your account is protected with Google Authenticator.
+                            </div>
+                            <div class="text-center">
+                                <button class="btn btn-outline-danger" onclick="showDisableSection()">
+                                    <i class="fas fa-times-circle me-2"></i>Disable 2FA
+                                </button>
+                            </div>
+                        `;
+                        setupSection.classList.add('d-none');
+                        disableSection.classList.add('d-none');
+                    } else {
+                        statusSection.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Two-Factor Authentication is Disabled</strong><br>
+                                Enable 2FA to add an extra layer of security to your account.
+                            </div>
+                            <div class="text-center">
+                                <button class="btn btn-primary" onclick="showSetupSection()">
+                                    <i class="fas fa-shield-alt me-2"></i>Enable 2FA
+                                </button>
+                            </div>
+                        `;
+                        setupSection.classList.add('d-none');
+                        disableSection.classList.add('d-none');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading 2FA status:', error);
+                    showAlert('An error occurred while loading 2FA status.', 'danger');
+                });
+        }
+
+        function showSetupSection() {
+            document.getElementById('statusSection').classList.add('d-none');
+            document.getElementById('setupSection').classList.remove('d-none');
+            document.getElementById('disableSection').classList.add('d-none');
+
+            // Generate QR code
+            generateQRCode();
+        }
+
+        function showDisableSection() {
+            document.getElementById('statusSection').classList.add('d-none');
+            document.getElementById('setupSection').classList.add('d-none');
+            document.getElementById('disableSection').classList.remove('d-none');
+        }
+
+        async function generateQRCode() {
+            try {
+                if (window.ensureCsrfToken) {
+                    await window.ensureCsrfToken();
+                }
+
+                const requestQr = async function(forceRefreshToken) {
+                    if (forceRefreshToken && window.ensureCsrfToken) {
+                        await window.ensureCsrfToken(true);
+                    }
+
+                    const response = await fetch('generate_2fa_qr.php', {
+                        method: 'POST',
+                        headers: window.withCsrfHeaders ? window.withCsrfHeaders() : {},
+                    });
+
+                    const text = await response.text();
+                    return JSON.parse(text);
+                };
+
+                let data = await requestQr(false);
+
+                if (!data.success && data.message === 'Security validation failed. Please refresh and try again.') {
+                    data = await requestQr(true);
+                }
+
+                if (data.success) {
+                    const otpauth = data.qr_code_url || '';
+                    const primaryImage = data.qr_image_url || '';
+                    const fallbackImage = otpauth
+                        ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(otpauth)}`
+                        : '';
+
+                    const qrCodeContainer = document.getElementById('qrCodeContainer');
+                    const img = document.createElement('img');
+                    img.alt = 'QR Code';
+                    img.className = 'img-fluid mb-2';
+                    img.style.maxWidth = '220px';
+
+                    if (primaryImage) {
+                        img.src = primaryImage;
+                    } else if (fallbackImage) {
+                        img.src = fallbackImage;
+                    }
+
+                    img.onerror = function() {
+                        if (fallbackImage && img.src !== fallbackImage) {
+                            img.src = fallbackImage;
+                            return;
+                        }
+
+                        qrCodeContainer.innerHTML = '<div class="alert alert-warning p-2">Unable to load QR image. Use the manual code below to add your account.</div>';
+                    };
+
+                    qrCodeContainer.innerHTML = '';
+                    qrCodeContainer.appendChild(img);
+                    document.getElementById('manualCode').textContent = data.secret;
+                } else {
+                    showAlert(data.message, 'danger');
+                }
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+                showAlert('An error occurred while generating QR code.', 'danger');
+            }
+        }
+
+        // Verify 2FA setup
+        document.getElementById('verify2FAForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const code = document.getElementById('verificationCode').value;
+            const verifyBtn = document.getElementById('verifyBtn');
+            const originalText = verifyBtn.innerHTML;
+
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verifying...';
+
+            fetch('verify_2fa_setup.php', {
+                method: 'POST',
+                headers: window.withCsrfHeaders ? window.withCsrfHeaders({
+                    'Content-Type': 'application/json',
+                }) : {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('2FA setup verified! Generating backup codes...', 'success');
+                    generateBackupCodes();
+                } else {
+                    showAlert(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('An error occurred during verification.', 'danger');
+            })
+            .finally(() => {
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = originalText;
+            });
+        });
+
+        function generateBackupCodes() {
+            fetch('generate_backup_codes.php', {
+                method: 'POST',
+                headers: window.withCsrfHeaders ? window.withCsrfHeaders() : {},
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        backupCodes = data.backup_codes;
+                        displayBackupCodes();
+                        document.getElementById('setupSection').classList.add('d-none');
+                        document.getElementById('backupCodesSection').classList.remove('d-none');
+                    } else {
+                        showAlert(data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error generating backup codes:', error);
+                    showAlert('An error occurred while generating backup codes.', 'danger');
+                });
+        }
+
+        function displayBackupCodes() {
+            const codesHtml = backupCodes.map((code, index) =>
+                `<div class="d-inline-block bg-primary p-2 m-1 rounded font-monospace text-dark">${code}</div>`
+            ).join('');
+
+            document.getElementById('backupCodes').innerHTML = codesHtml;
+        }
+
+        function downloadBackupCodes() {
+            const codesText = backupCodes.join('\n');
+            const blob = new Blob([codesText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'secureauth-backup-codes.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyBackupCodes() {
+            const codesText = backupCodes.join('\n');
+            navigator.clipboard.writeText(codesText).then(() => {
+                showAlert('Backup codes copied to clipboard!', 'success');
+            }).catch(() => {
+                showAlert('Failed to copy codes. Please copy them manually.', 'warning');
+            });
+        }
+
+        function completeSetup() {
+            showAlert('Two-Factor Authentication has been successfully enabled!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+
+        // Disable 2FA
+        document.getElementById('disable2FAForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const password = document.getElementById('disableCode').value;
+            const disableBtn = document.getElementById('disableBtn');
+            const originalText = disableBtn.innerHTML;
+
+            if (!confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
+                return;
+            }
+
+            disableBtn.disabled = true;
+            disableBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Disabling...';
+
+            fetch('disable_2fa.php', {
+                method: 'POST',
+                headers: window.withCsrfHeaders ? window.withCsrfHeaders({
+                    'Content-Type': 'application/json',
+                }) : {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Two-Factor Authentication has been disabled.', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showAlert(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('An error occurred while disabling 2FA.', 'danger');
+            })
+            .finally(() => {
+                disableBtn.disabled = false;
+                disableBtn.innerHTML = originalText;
+            });
+        });
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
